@@ -57,15 +57,10 @@ if __name__ == '__main__':
             elif Ready == True:
                 #print "Fetch"              
                 Fetch(robot, pub_cmd)
+                last = (250,480)
                 Ready = False
 
         
 # x right
 # y down
 # z outward
-
-
-    
-    
-    
-    
