@@ -42,8 +42,10 @@ if __name__ == '__main__':
         #    no ball in vision: (Cx,Cy) = (250,-999)
         
         if Cy == -999:	# no ball in vision
-        	cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic)
-        	print"I see no ball"
+            if not cleaned:
+                cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic)
+            elif cleaned:
+                print"I see no ball"
         elif Cy > 0:
             print"Ready=",Ready        
             if Ready == False:
