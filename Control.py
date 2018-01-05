@@ -14,7 +14,6 @@ import numpy as np
 from Vision import findCentroid, closestBall, image2global, InRange
 
 def PI_control(Cx,Cy,ori_sum,pub_cmd):
-    print"hi"
     align = False
     ready = False
     cmd = Twist()
@@ -67,7 +66,7 @@ def Fetch(robot, pub_cmd):
     
     return
 
-def spinAround(robot, cx, cy, pub_cmd,ic):
+def spinAround(robot, cx, cy, pub_cmd,ic,origin):
     cmd = Twist()
 
     robot.mark()    # mark current location
@@ -77,7 +76,45 @@ def spinAround(robot, cx, cy, pub_cmd,ic):
         pub_cmd.publish(cmd)    # send command
         time.sleep(0.01)
 
-        (cx, cy) = closestBall(robot,ic) # update vision
-        if robot.travelAng() > 6.3: # turn more than one cycle
+        (cx, cy) = closestBall(robot,ic,origin) # update vision
+        print"-----------------",robot.travelAng()
+        if robot.travelAng() > -0.3 and robot.travelAng() < 0: # turn more than one cycle
+            time.sleep(5) 
             return True # region clean
     return False
+
+'''    
+def GoToNext(robot_pos):
+	IK_pos[0]= 1.8
+	IK_pos[1]= 0
+		
+    (roll,pitch,yaw) = euler_from_quaternion(
+    [robot_pos.orientation.x, robot_pos.orientation.y, robot_pos.orientation.z, robot_pos.orientation.w])
+    x_err = IK_pos[0] - robot_pos.position.x
+    y_err = IK_pos[1] - robot_pos.position.y
+    total_err = math.sqrt(x_err**2 +y_err**2) 
+    alpha = math.atan2(y_err,x_err)     
+    ori_err = alpha - yaw
+    global ori_sum
+    ori_sum += ori_err
+	
+	#robot.mark()    # mark to go forward to next
+    while abs(x_err) > 20 and abs(y_err) > 20 and abs(ori_err) > 0.174:#robot.travelDist() <= total_err :
+		cmd = Twist()
+			 
+		velocity = 1*(total_err-dist)#*math.cos(ori_err)
+		if velocity > 0.2:
+				velocity = 0.2
+		elif velocity < -0.2:
+				velocity = -0.2
+
+		angular = 1.5*ori_err + 0.0015*ori_sum
+		if angular > 0.25:
+				angular = 0.2
+		elif angular < -0.25:
+				angular = -0.2
+
+		cmd.linear.x = velocity
+		cmd.angular.z = angular
+		pub_cmd.publish(cmd)    
+'''    

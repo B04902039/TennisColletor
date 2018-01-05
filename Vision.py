@@ -16,7 +16,7 @@ from Classes import robot_location, image_converter
 
 def InRange(Cx,Cy,robot,origin): 
     (x,y) =  image2global(Cx,Cy)
-    print "\n\n pixel x,y = ",x,y
+    #print "\n\n pixel x,y = ",x,y
     observed = np.array([x,y,0,1])
     # USE ODEMETRY(robot_pos) to calc homogneous transformaiton matrix     
     (roll,pitch,yaw) = euler_from_quaternion([robot.robot_pos.orientation.x, robot.robot_pos.orientation.y,\
@@ -28,7 +28,7 @@ def InRange(Cx,Cy,robot,origin):
         
     x_pos = IK_pos[0]-origin[0]
     y_pos = IK_pos[1]-origin[1]
-    print"------",x_pos,y_pos
+    #print"------",x_pos,y_pos
 
     if x_pos < 180 and 0 < x_pos and\
        0 < y_pos and y_pos < 180:
@@ -49,7 +49,7 @@ def findCentroid(image):
 def euclidean_dist(a, b):
     return (a[0]-b[0])**2 + (a[1]-b[1])**2
 
-def closestBall(robot, ic, last=[(250,480)]): # last is a static var!!!!!!
+def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     # robot: robot location instance, ic: image converter instance, last: the closest ball in last image
     (Cx,Cy,radius) = 250,-999,0
     ic.cv_image = np.array(ic.cv_image)
@@ -75,17 +75,17 @@ def closestBall(robot, ic, last=[(250,480)]): # last is a static var!!!!!!
     
     min_dist = 210000000
     for (x, y) in circles:
-    	origin = np.array([0,0]) # hardcoding, need to be modified
+    	#origin = np.array([0,0]) # hardcoding, need to be modified
         if InRange(x,y,robot,origin) == True:
-            if euclidean_dist((x,y), last[0]) < min_dist:
-                min_dist = euclidean_dist((x,y), last[0])
+            if euclidean_dist((x,y), last) < min_dist:
+                min_dist = euclidean_dist((x,y), last)
                 (Cx,Cy) = (x,y)
     radius = 10
     cv2.circle(output, (Cx, Cy), radius, (0, 255, 0), 4)
     #print "the x, y coordinate of the closest circle is",Cx,Cy        
     cv2.imshow("output",output)
     cv2.waitKey(1)
-    last[0] = (Cx, Cy)
+    last = (Cx, Cy)
     return Cx,Cy                
 	#except:
 	#pass
