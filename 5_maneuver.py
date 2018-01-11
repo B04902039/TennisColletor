@@ -16,7 +16,7 @@ import numpy as np
 
 from Classes import robot_location, image_converter
 from Vision import findCentroid, closestBall, image2global, InRange
-from Control import PI_control, Fetch, spinAround
+from Control import PI_control, Fetch, spinAround, GoToNext
 
 if __name__ == '__main__':
     robot = robot_location()  
@@ -50,12 +50,14 @@ if __name__ == '__main__':
                 cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
             elif cleaned == True:
                 print"I see no ball"
+                #cleaned = False
+                GoToNext(robot,pub_cmd)
         elif Cy > 0:
-            #print"Ready=",Ready        
+            print"see ball"        
             if Ready == False:
                 Ready = PI_control(Cx,Cy,ori_sum,pub_cmd)                    
             elif Ready == True:
-                #print "Fetch"              
+                print "Fetch"
                 Fetch(robot, pub_cmd)
                 last = (250,480)
                 Ready = False
@@ -64,3 +66,9 @@ if __name__ == '__main__':
 # x right
 # y down
 # z outward
+
+
+    
+    
+    
+    

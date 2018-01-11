@@ -10,6 +10,7 @@ from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
+from tf.transformations import euler_from_quaternion
 
 from Vision import findCentroid, closestBall, image2global, InRange
 
@@ -54,13 +55,13 @@ def Fetch(robot, pub_cmd):
 
     robot.mark()    # mark to go forward
     while robot.travelDist() <= 0.8:
-        cmd.linear.x = 0.2
+        cmd.linear.x = 0.15
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     
     robot.mark()    # mark to go backward
     while robot.travelDist() <= 0.8:
-        cmd.linear.x = -0.2
+        cmd.linear.x = -0.15
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     
@@ -77,44 +78,55 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
         time.sleep(0.01)
 
         (cx, cy) = closestBall(robot,ic,origin) # update vision
-        print"-----------------",robot.travelAng()
-        if robot.travelAng() > -0.3 and robot.travelAng() < 0: # turn more than one cycle
+        #print"-----------------",robot.travelAng()
+        if robot.travelAng() > 0.3 :#and robot.travelAng() < -0.1: # turn more than one cycle
             time.sleep(5) 
             return True # region clean
     return False
 
-'''    
-def GoToNext(robot_pos):
-	IK_pos[0]= 1.8
-	IK_pos[1]= 0
-		
-    (roll,pitch,yaw) = euler_from_quaternion(
-    [robot_pos.orientation.x, robot_pos.orientation.y, robot_pos.orientation.z, robot_pos.orientation.w])
-    x_err = IK_pos[0] - robot_pos.position.x
-    y_err = IK_pos[1] - robot_pos.position.y
+
+def GoToNext(robot_pos, pub_cmd):
+    cmd = Twist()
+    IK_pos= np.array([2.3,0,0,0])
+    (roll,pitch,yaw) = euler_from_quaternion(\
+    [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
+    
+    x_err = IK_pos[0] - robot_pos.robot_pos.position.x
+    y_err = IK_pos[1] - robot_pos.robot_pos.position.y
     total_err = math.sqrt(x_err**2 +y_err**2) 
     alpha = math.atan2(y_err,x_err)     
     ori_err = alpha - yaw
-    global ori_sum
-    ori_sum += ori_err
-	
-	#robot.mark()    # mark to go forward to next
-    while abs(x_err) > 20 and abs(y_err) > 20 and abs(ori_err) > 0.174:#robot.travelDist() <= total_err :
-		cmd = Twist()
-			 
-		velocity = 1*(total_err-dist)#*math.cos(ori_err)
-		if velocity > 0.2:
-				velocity = 0.2
-		elif velocity < -0.2:
-				velocity = -0.2
+    #global ori_sum
+    #ori_sum[0] += ori_err
 
-		angular = 1.5*ori_err + 0.0015*ori_sum
-		if angular > 0.25:
-				angular = 0.2
-		elif angular < -0.25:
-				angular = -0.2
+    #robot.mark()    # mark to go forward to next
+    while abs(x_err) > 0.5 or abs(y_err) > 0.05 or abs(ori_err) > 0.05:
+        (roll,pitch,yaw) = euler_from_quaternion(\
+        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
+        x_err = IK_pos[0] - robot_pos.robot_pos.position.x
+        y_err = IK_pos[1] - robot_pos.robot_pos.position.y
+        total_err = math.sqrt(x_err**2 +y_err**2) 
+        alpha = math.atan2(y_err,x_err)     
+        ori_err = alpha - yaw
+        #global ori_sum
+        #ori_sum[0] -= ori_err               
+        
+        velocity = 1*(total_err)#*math.cos(ori_err)
+        if velocity > 0.2:
+            velocity = 0.2
+        elif velocity < -0.2:
+            velocity = -0.2
 
-		cmd.linear.x = velocity
-		cmd.angular.z = angular
-		pub_cmd.publish(cmd)    
-'''    
+        angular = 0.5*ori_err #+ 0.0015*ori_sum[0]
+        if angular > 0.25:
+            angular = 0.2
+        elif angular < -0.25:
+            angular = -0.2
+
+        cmd.linear.x = velocity
+        cmd.angular.z = angular
+        print"x pos, y pos =",robot_pos.robot_pos.position.x,robot_pos.robot_pos.position.y
+        #print"goal =  ",IK_pos
+        print"alpha, ori_err =  ",alpha,ori_err
+        pub_cmd.publish(cmd)
+        time.sleep(0.01)
