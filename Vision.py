@@ -16,22 +16,25 @@ from Classes import robot_location, image_converter
 
 def InRange(Cx,Cy,robot,origin): 
     (x,y) =  image2global(Cx,Cy)
-    #print "\n\n pixel x,y = ",x,y
-    observed = np.array([x,y,0,1])
+    #print "\robot position x, y",robot.robot_pos.position.x,robot.robot_pos.position.y
+    #print "\n Cx, Cy = ",Cx,Cy
+    #print "\n Observed x,y = ",x,y
+    observed = np.array([0.01*x,0.01*y,0,1])
     # USE ODEMETRY(robot_pos) to calc homogneous transformaiton matrix     
     (roll,pitch,yaw) = euler_from_quaternion([robot.robot_pos.orientation.x, robot.robot_pos.orientation.y,\
      robot.robot_pos.orientation.z, robot.robot_pos.orientation.w])
     (Px,Py,Pz) = robot.robot_pos.position.x,robot.robot_pos.position.y,robot.robot_pos.position.z
-
+    
     HT = np.array([[math.cos(yaw),-math.sin(yaw),0,Px],[math.sin(yaw),math.cos(yaw),0,Py],[0,0,1,Pz],[0,0,0,1]])   
     IK_pos = np.dot(HT,observed)
         
     x_pos = IK_pos[0]-origin[0]
     y_pos = IK_pos[1]-origin[1]
-    #print"------",x_pos,y_pos
-
-    if x_pos < 180 and 0 < x_pos and\
-       0 < y_pos and y_pos < 180:
+    #print"global frame x,y = ",x_pos,y_pos
+            
+    
+    if x_pos < 2.2 and -0.2 < x_pos and\
+       -1.8 < y_pos and y_pos < 0:
         return True
     else:
         return False
@@ -55,7 +58,7 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     ic.cv_image = np.array(ic.cv_image)
     output = ic.cv_image.copy()
 
-	#try:
+    # try:
     img_hsv = cv2.cvtColor(ic.cv_image, cv2.COLOR_BGR2HSV)
     img_hsv = cv2.GaussianBlur(img_hsv, (7,7), 0)
     green_low = (55-25, 50, 50)
@@ -75,7 +78,7 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     
     min_dist = 210000000
     for (x, y) in circles:
-    	#origin = np.array([0,0]) # hardcoding, need to be modified
+    #origin = np.array([0,0]) # hardcoding, need to be modified
         if InRange(x,y,robot,origin) == True:
             if euclidean_dist((x,y), last) < min_dist:
                 min_dist = euclidean_dist((x,y), last)
@@ -86,9 +89,7 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     cv2.imshow("output",output)
     cv2.waitKey(1)
     last = (Cx, Cy)
-    return Cx,Cy                
-	#except:
-	#pass
+    return Cx,Cy
 
 def image2global(Cx,Cy):
     dx_Paras = np.array([ -1.09259259e-04,   6.42777778e-02,  -1.31933333e+01,   1.11640000e+03])
@@ -98,7 +99,11 @@ def image2global(Cx,Cy):
     
     delta_x =  dx_Paras[0]*Y_Global**3 + dx_Paras[1]*Y_Global**2+dx_Paras[2]*Y_Global+dx_Paras[3]
     X_Global = (Cx-291)/delta_x*60 - 10
-    return X_Global, Y_Global
+    
+    X_car = Y_Global     
+    Y_car = -X_Global
+    
+    return X_car, Y_car
     
 
 

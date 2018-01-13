@@ -14,6 +14,11 @@ from tf.transformations import euler_from_quaternion
 
 from Vision import findCentroid, closestBall, image2global, InRange
 
+from nav_msgs.msg import Odometry, Path
+from geometry_msgs.msg import Twist
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseArray
+
 def PI_control(Cx,Cy,ori_sum,pub_cmd):
     align = False
     ready = False
@@ -79,13 +84,13 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
 
         (cx, cy) = closestBall(robot,ic,origin) # update vision
         #print"-----------------",robot.travelAng()
-        if robot.travelAng() > 0.3 :#and robot.travelAng() < -0.1: # turn more than one cycle
-            time.sleep(5) 
+        if robot.travelAng() > -0.3 and robot.travelAng() < -0.1: # turn more than one cycle
+            time.sleep(1) 
             return True # region clean
     return False
 
 
-def GoToNext(robot_pos, pub_cmd):
+def GoToNext(robot_pos, pub_cmd,path,pub_path):
     cmd = Twist()
     IK_pos= np.array([2.3,0,0,0])
     (roll,pitch,yaw) = euler_from_quaternion(\
@@ -98,9 +103,31 @@ def GoToNext(robot_pos, pub_cmd):
     ori_err = alpha - yaw
     #global ori_sum
     #ori_sum[0] += ori_err
-
-    #robot.mark()    # mark to go forward to next
-    while abs(x_err) > 0.5 or abs(y_err) > 0.05 or abs(ori_err) > 0.05:
+            
+    doc = open("movetonext.txt","w")  
+    
+    print"\n\n\nTURN\n\n\n"
+    while not (abs(ori_err) < 0.05): # turn
+        append(robot_pos,pub_path,path)
+        (roll,pitch,yaw) = euler_from_quaternion(\
+        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
+        x_err = IK_pos[0] - robot_pos.robot_pos.position.x
+        y_err = IK_pos[1] - robot_pos.robot_pos.position.y
+        alpha = math.atan2(y_err, x_err)     
+        ori_err = alpha - yaw
+        angular = ori_err #+ 0.0015*ori_sum[0]
+        if angular > 0.25:
+            angular = 0.2
+        elif angular < -0.25:
+            angular = -0.2
+        
+        cmd.linear.x = 0.1
+        cmd.angular.z = angular
+        pub_cmd.publish(cmd)
+        time.sleep(0.01)
+    print"\n\n\nForward\n\n\n"    
+    while not (x_err < 0.5 and abs(y_err) < 0.1): # linear approching
+        append(robot_pos,pub_path,path)
         (roll,pitch,yaw) = euler_from_quaternion(\
         [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
         x_err = IK_pos[0] - robot_pos.robot_pos.position.x
@@ -111,7 +138,7 @@ def GoToNext(robot_pos, pub_cmd):
         #global ori_sum
         #ori_sum[0] -= ori_err               
         
-        velocity = 1*(total_err)#*math.cos(ori_err)
+        velocity = 0.3*(total_err)#*math.cos(ori_err)
         if velocity > 0.2:
             velocity = 0.2
         elif velocity < -0.2:
@@ -124,9 +151,39 @@ def GoToNext(robot_pos, pub_cmd):
             angular = -0.2
 
         cmd.linear.x = velocity
-        cmd.angular.z = angular
-        print"x pos, y pos =",robot_pos.robot_pos.position.x,robot_pos.robot_pos.position.y
+        cmd.angular.z = 0
+        doc.write("\nx_err, y_err ="+str(x_err)+" "+str(y_err))
         #print"goal =  ",IK_pos
-        print"alpha, ori_err =  ",alpha,ori_err
+        doc.write("\nalpha, ori_err =  "+str(alpha)+" "+str(ori_err))
         pub_cmd.publish(cmd)
         time.sleep(0.01)
+    print"\n\n\nTURN\n\n\n"
+    while not (abs(yaw) < 0.05): # turn
+        append(robot_pos,pub_path,path)
+        (roll,pitch,yaw) = euler_from_quaternion(\
+        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
+
+        angular = -0.5*yaw #+ 0.0015*ori_sum[0]
+        if angular > 0.25:
+            angular = 0.2
+        elif angular < -0.25:
+            angular = -0.2
+        cmd.linear.x = 0.05
+        cmd.angular.z = angular
+        pub_cmd.publish(cmd)
+        time.sleep(0.01)
+    print"\n\n\nNEXT BLOCK\n\n\n"
+    
+
+def append(robot,pub_path,path):
+    #print "\nthe appended pos is \n"+str(IK_pos)
+    pose = PoseStamped()
+    pose.pose.position.x = robot.robot_pos.position.x
+    pose.pose.position.y = robot.robot_pos.position.y
+    
+    path.header.frame_id="laser"
+    path.header.stamp=rospy.Time.now()
+    path.poses.append(pose)
+    pub_path.publish(path)
+
+

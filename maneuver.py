@@ -1,150 +1,75 @@
 # -*- coding: utf-8 -*-
-"""
-Spyder Editor
 
-This is a temporary script file.
-"""
 #!/usr/bin/env python
 import time
 import roslib
-import sys
+import math
 import rospy
 import cv2
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
+from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 
+from Classes import robot_location, image_converter
+from Vision import findCentroid, closestBall, image2global, InRange
+from Control import PI_control, Fetch, spinAround, GoToNext
 
-class image_converter:
-  
-  def __init__(self):
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseArray
 
-    self.bridge = CvBridge()
-    self.cv_image = ([0])
-    self.depth = np.array([0])
-  def callback(self,data):
-    try:
-        self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-    except CvBridgeError as e:
-        print(e)
-
-    cv2.imshow("Image window", self.cv_image)
-    cv2.waitKey(3)
-
-
-def PI_control(Cx,Cy):
-    align = False
-    ready = False
-    cmd = Twist()
-    try:
-        ori_err = 320 - Cx # Cx in range (0,640)
-        global ori_sum
-        ori_sum += ori_err
-        
-        if abs(ori_err) < 10:
-            ori_err = 0
-            ori_sum = 0
-            align = True
-               
-        angular = 0.002*ori_err + 0.00001*ori_sum
-        if angular > 0.5:
-                angular = 0.5
-        elif angular < -0.5:
-    		    angular = -0.5
-        cmd.angular.z = angular
-            
-        # get closer
-        if align == True:
-            if Cy < 430:
-                cmd.linear.x = 0.1
-            elif Cy > 430:
-                ready = True
-        
-        pub_cmd.publish(cmd)
-        return ready
-        
-    except:
-        pass
-
-def Fetch():
-    Ready =True
-    global forward
-    forward += 1
-    '''
-    cmd = Twist()
-    cmd.linear.x = 0.2
-    
-    pub_cmd.publish(cmd)
-    '''
-    if forward > 10:
-        forward = 0
-        Ready = False
-    return Ready
-
-
-def closestBall(Cx,Cy,radius):
-    (Cx,Cy,radius) = 320,-999,0
-    ic.cv_image = np.array(ic.cv_image)
-    try:
-        image = cv2.inRange(ic.cv_image , (0,70,70), (80,250,250))
-        output = ic.cv_image.copy()
-        kernel = np.ones((5,5), np.uint8)
-        #kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(5, 5)) 
-        
-        image = cv2.erode(image, kernel, iterations=1)#3
-        image = cv2.dilate(image, kernel, iterations=1)         
-        #cv2.imshow("seg",image)
-        circles = cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 10,40,10,32,30)             
-        circles = np.round(circles[0, :]).astype("int")
-
-        for (x, y, r) in circles:
-            if r < 20 and y > Cy and y > 250:
-                Cy = y
-                Cx = x
-                radius = r
-        cv2.circle(output, (Cx, Cy), radius, (0, 255, 0), 4)
-        #print "the x, y coordinate of the closest circle is",Cx,Cy        
-        #cv2.imshow("output",output)
-        #cv2.waitKey(0.1)
-        return Cx,Cy                
-    except:
-        pass
-    
 if __name__ == '__main__':
-    
+    robot = robot_location()  
     ic = image_converter()
     rospy.init_node('image_converter', anonymous=True)
 
     rospy.Subscriber("/camera/rgb/image_color",Image,ic.callback)
+    rospy.Subscriber('/RosAria/pose', Odometry, robot.odometry)
+    path = Path() 
+    time.sleep(1)    
+  
     pub_cmd = rospy.Publisher('/RosAria/cmd_vel', Twist, queue_size=1000)
+    pub_path = rospy.Publisher('/path', Path, queue_size=1)
+    
     global ori_sum ; ori_sum = 0
-    global forward; forward = 0
     (Cx,Cy,radius) = 0,0,0
     Ready = False
-    Blank = 0
+    cleaned = False
+    origin = np.array([0,0])
+    last = (250,480)
     
     while not rospy.is_shutdown():
         time.sleep(0.01)
-        (Cx,Cy)=  closestBall(Cx,Cy,radius) if closestBall(Cx,Cy,radius) else (320,-999)
-        print"Cx,Cy=",Cx,Cy
+        #try:
+        (Cx,Cy)=  closestBall(robot,ic,origin,last)
+        if Cy > 100: 
+            last = (Cx,Cy)
+        #except:
+        #    no ball in vision: (Cx,Cy) = (250,-999)
         
-        if Cy == -999:
-            Blank += 1
-            if Blank > 30:
-                print "random walk!"
-                 
-        elif Cy > 0:        
+        if Cy == -999:	# no ball in vision
+            if cleaned is not True:
+                cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
+            elif cleaned == True:
+                print"I see no ball"
+                cleaned = False
+                GoToNext(robot,pub_cmd,path,pub_path)
+                origin[0]+=1.8
+        elif Cy > 0:
+            print"see ball"        
             if Ready == False:
-                Ready = PI_control(Cx,Cy)
+                Ready = PI_control(Cx,Cy,ori_sum,pub_cmd)                    
             elif Ready == True:
-                Ready = Fetch()
-                print "Fecth!"
-            Blank = 0
+                print "Fetch"
+                Fetch(robot, pub_cmd)
+                last = (250,480)
+                Ready = False
 
-
+        
 # x right
 # y down
 # z outward
