@@ -18,6 +18,10 @@ from Classes import robot_location, image_converter
 from Vision import findCentroid, closestBall, image2global, InRange
 from Control import PI_control, Fetch, spinAround, GoToNext
 
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseArray
+
 if __name__ == '__main__':
     robot = robot_location()  
     ic = image_converter()
@@ -25,9 +29,11 @@ if __name__ == '__main__':
 
     rospy.Subscriber("/camera/rgb/image_color",Image,ic.callback)
     rospy.Subscriber('/RosAria/pose', Odometry, robot.odometry)
+    path = Path() 
     time.sleep(1)    
   
     pub_cmd = rospy.Publisher('/RosAria/cmd_vel', Twist, queue_size=1000)
+    pub_path = rospy.Publisher('/path', Path, queue_size=1)
     
     global ori_sum ; ori_sum = 0
     (Cx,Cy,radius) = 0,0,0
@@ -50,8 +56,9 @@ if __name__ == '__main__':
                 cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
             elif cleaned == True:
                 print"I see no ball"
-                #cleaned = False
-                GoToNext(robot,pub_cmd)
+                cleaned = False
+                GoToNext(robot,pub_cmd,path,pub_path)
+                origin[0]+=1.8
         elif Cy > 0:
             print"see ball"        
             if Ready == False:
