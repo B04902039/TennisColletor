@@ -92,7 +92,7 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
 
 def GoToNext(robot_pos, pub_cmd,path,pub_path):
     cmd = Twist()
-    IK_pos= np.array([2.3,0,0,0])
+    IK_pos= np.array([1.8,1,0,0])
     (roll,pitch,yaw) = euler_from_quaternion(\
     [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
     
@@ -104,11 +104,11 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path):
     #global ori_sum
     #ori_sum[0] += ori_err
             
-    doc = open("movetonext.txt","w")  
     
     print"\n\n\nTURN\n\n\n"
-    while not (abs(ori_err) < 0.05): # turn
+    while (not(abs(ori_err) < 0.05)) and (not(x_err < 0.5 and abs(y_err) < 0.3)): # turn
         append(robot_pos,pub_path,path)
+        print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))        
         (roll,pitch,yaw) = euler_from_quaternion(\
         [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
         x_err = IK_pos[0] - robot_pos.robot_pos.position.x
@@ -121,12 +121,14 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path):
         elif angular < -0.25:
             angular = -0.2
         
-        cmd.linear.x = 0.1
+        #cmd.linear.x = 0.1
         cmd.angular.z = angular
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     print"\n\n\nForward\n\n\n"    
-    while not (x_err < 0.5 and abs(y_err) < 0.1): # linear approching
+    while not (x_err < 0.5 and abs(y_err) < 0.3): # linear approching
+        print("\nxerr, yerr= "+str(x_err)+' '+str(y_err))
+        print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))
         append(robot_pos,pub_path,path)
         (roll,pitch,yaw) = euler_from_quaternion(\
         [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
@@ -152,13 +154,15 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path):
 
         cmd.linear.x = velocity
         cmd.angular.z = 0
-        doc.write("\nx_err, y_err ="+str(x_err)+" "+str(y_err))
+        
+        
         #print"goal =  ",IK_pos
-        doc.write("\nalpha, ori_err =  "+str(alpha)+" "+str(ori_err))
+        #doc.write("\nalpha, ori_err =  "+str(alpha)+" "+str(ori_err))
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-    print"\n\n\nTURN\n\n\n"
+    #print"\n\n\nTURN\n\n\n"
     while not (abs(yaw) < 0.05): # turn
+        print("\nyaw = "+str(yaw))
         append(robot_pos,pub_path,path)
         (roll,pitch,yaw) = euler_from_quaternion(\
         [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
@@ -172,7 +176,7 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path):
         cmd.angular.z = angular
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-    print"\n\n\nNEXT BLOCK\n\n\n"
+    #print"\n\n\nNEXT BLOCK\n\n\n"
     
 
 def append(robot,pub_path,path):
