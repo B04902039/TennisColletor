@@ -39,6 +39,7 @@ if __name__ == '__main__':
     (Cx,Cy,radius) = 0,0,0
     Ready = False
     cleaned = False
+    veryClean = False
     origin = np.array([0,0])
     last = (250,480)
     
@@ -54,11 +55,17 @@ if __name__ == '__main__':
         if Cy == -999:	# no ball in vision
             if cleaned is not True:
                 cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
-            elif cleaned == True:
+            '''
+            if cleaned:
+                GoToNext(robot,pub_cmd,path,pub_path,origin)
+                veryClean = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
+            '''
+            if cleaned == True:
                 print"I see no ball"
                 cleaned = False
-                GoToNext(robot,pub_cmd,path,pub_path)
-                origin[0]+=1.8
+                veryClean = True
+                #origin[0]+=1.8
+                #GoToNext(robot,pub_cmd,path,pub_path,origin)
         elif Cy > 0:
             print"see ball"        
             if Ready == False:
@@ -73,9 +80,3 @@ if __name__ == '__main__':
 # x right
 # y down
 # z outward
-
-
-    
-    
-    
-    

@@ -36,8 +36,10 @@ def PI_control(Cx,Cy,ori_sum,pub_cmd):
     angular = 0.002*ori_err + 0.00001*ori_sum
     if angular > 0.5:
             angular = 0.5
+            linear = 0.05
     elif angular < -0.5:
             angular = -0.5
+            linear = 0.05
     cmd.angular.z = angular
         
     # get closer
@@ -60,13 +62,14 @@ def Fetch(robot, pub_cmd):
 
     robot.mark()    # mark to go forward
     while robot.travelDist() <= 0.8:
-        cmd.linear.x = 0.15
+        cmd.linear.x = 0.1
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     
+    
     robot.mark()    # mark to go backward
-    while robot.travelDist() <= 0.8:
-        cmd.linear.x = -0.15
+    while robot.travelDist() <= 0.2:
+        cmd.linear.x = -0.2
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     
@@ -77,22 +80,22 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
 
     robot.mark()    # mark current location
     while cy == -999:   # no ball in vision
-        cmd.linear.x = 0.1
-        cmd.angular.z = 0.5
+        cmd.linear.x = -0.05
+        cmd.angular.z = -0.5
         pub_cmd.publish(cmd)    # send command
         time.sleep(0.01)
 
         (cx, cy) = closestBall(robot,ic,origin) # update vision
         #print"-----------------",robot.travelAng()
-        if robot.travelAng() > -0.3 and robot.travelAng() < -0.1: # turn more than one cycle
+        if robot.travelAng() < 0.2 and robot.travelAng() > 0.1: # turn more than one cycle
             time.sleep(1) 
             return True # region clean
     return False
 
 
-def GoToNext(robot_pos, pub_cmd,path,pub_path):
+def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):
     cmd = Twist()
-    IK_pos= np.array([1.8,1,0,0])
+    IK_pos = origin
     (roll,pitch,yaw) = euler_from_quaternion(\
     [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
     
@@ -126,7 +129,7 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path):
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     print"\n\n\nForward\n\n\n"    
-    while not (x_err < 0.5 and abs(y_err) < 0.3): # linear approching
+    while not (x_err < 0.3 and abs(y_err) < 0.3): # linear approching
         print("\nxerr, yerr= "+str(x_err)+' '+str(y_err))
         print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))
         append(robot_pos,pub_path,path)

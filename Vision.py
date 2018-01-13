@@ -33,15 +33,14 @@ def InRange(Cx,Cy,robot,origin):
     #print"global frame x,y = ",x_pos,y_pos
             
     
-    if x_pos < 2.2 and -0.2 < x_pos and\
-       -1.8 < y_pos and y_pos < 0:
+    if x_pos < 2.2 and -0.2 < x_pos and -2.0 < y_pos and y_pos < 0.3:
         return True
     else:
         return False
 
 def findCentroid(image):
     circles = []
-    contours, hier = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    im2, contours, hier = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for i in contours:
         M = cv2.moments(i)
         cx = int(M["m10"] / M["m00"])
@@ -50,7 +49,7 @@ def findCentroid(image):
     return circles
 
 def euclidean_dist(a, b):
-    return (a[0]-b[0])**2 + (a[1]-b[1])**2
+    return (a[0]-b[0])**2 + 5*((a[1]-b[1])**2)
 
 def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     # robot: robot location instance, ic: image converter instance, last: the closest ball in last image
@@ -73,7 +72,7 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11,11))
     image = cv2.erode(image, kernel, iterations=1)
     image = cv2.dilate(image, kernel, iterations=1)
-    cv2.imshow("haha",image)      
+    #cv2.imshow("haha",image)      
     circles = findCentroid(image)
     
     min_dist = 210000000
@@ -86,8 +85,8 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     radius = 10
     cv2.circle(output, (Cx, Cy), radius, (0, 255, 0), 4)
     #print "the x, y coordinate of the closest circle is",Cx,Cy        
-    cv2.imshow("output",output)
-    cv2.waitKey(1)
+    #cv2.imshow("output",output)
+    #cv2.waitKey(1)
     last = (Cx, Cy)
     return Cx,Cy
 
