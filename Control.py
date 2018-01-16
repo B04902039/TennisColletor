@@ -45,7 +45,7 @@ def PI_control(Cx,Cy,ori_sum,pub_cmd):
     # get closer
     if align == True:
         if Cy < 430:
-            cmd.linear.x = 0.1
+            cmd.linear.x = 0.2
         elif Cy > 430:
             ready = True
     
@@ -72,7 +72,8 @@ def Fetch(robot, pub_cmd):
         cmd.linear.x = -0.2
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-    
+        if robot.noSpin() ==False:
+            Fetch(robot, pub_cmd)
     return
 
 def spinAround(robot, cx, cy, pub_cmd,ic,origin):
@@ -91,6 +92,16 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
             time.sleep(1) 
             return True # region clean
     return False
+
+def Backoff(robot,pub_cmd):
+    robot.mark()    # mark to go backward
+    while robot.travelDist() <= 0.6:
+        cmd.linear.x = -0.2
+        pub_cmd.publish(cmd)
+        
+            
+        time.sleep(0.01)
+    return
 
 
 def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):

@@ -40,7 +40,7 @@ def InRange(Cx,Cy,robot,origin):
 
 def findCentroid(image):
     circles = []
-    im2, contours, hier = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, hier = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for i in contours:
         M = cv2.moments(i)
         cx = int(M["m10"] / M["m00"])
@@ -72,21 +72,21 @@ def closestBall(robot, ic, origin,last=(250,480)): # last is a static var!!!!!!
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11,11))
     image = cv2.erode(image, kernel, iterations=1)
     image = cv2.dilate(image, kernel, iterations=1)
-    #cv2.imshow("haha",image)      
+    cv2.imshow("haha",image)      
     circles = findCentroid(image)
     
     min_dist = 210000000
     for (x, y) in circles:
     #origin = np.array([0,0]) # hardcoding, need to be modified
-        if InRange(x,y,robot,origin) == True:
+        if True:#InRange(x,y,robot,origin) == True:
             if euclidean_dist((x,y), last) < min_dist:
                 min_dist = euclidean_dist((x,y), last)
                 (Cx,Cy) = (x,y)
     radius = 10
     cv2.circle(output, (Cx, Cy), radius, (0, 255, 0), 4)
     #print "the x, y coordinate of the closest circle is",Cx,Cy        
-    #cv2.imshow("output",output)
-    #cv2.waitKey(1)
+    cv2.imshow("output",output)
+    cv2.waitKey(1)
     last = (Cx, Cy)
     return Cx,Cy
 

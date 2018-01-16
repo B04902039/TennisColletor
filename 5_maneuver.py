@@ -9,6 +9,7 @@ import cv2
 from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from std_msgs.msg import Float32
+from std_msgs.msgs import Bool
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
 from cv_bridge import CvBridge, CvBridgeError
@@ -16,19 +17,21 @@ import numpy as np
 
 from Classes import robot_location, image_converter
 from Vision import findCentroid, closestBall, image2global, InRange
-from Control import PI_control, Fetch, spinAround, GoToNext
+from Control import PI_control, Fetch, spinAround, GoToNext,Backoff
 
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseArray
 
 if __name__ == '__main__':
-    robot = robot_location()  
+    robot = robot_location()
+      
     ic = image_converter()
     rospy.init_node('image_converter', anonymous=True)
 
     rospy.Subscriber("/camera/rgb/image_color",Image,ic.callback)
     rospy.Subscriber('/RosAria/pose', Odometry, robot.odometry)
+    rospy.Subscriber('/sona',robot.noSpin,status)
     path = Path() 
     time.sleep(1)    
   
@@ -40,6 +43,7 @@ if __name__ == '__main__':
     Ready = False
     cleaned = False
     veryClean = False
+    Finish = 0
     origin = np.array([0,0])
     last = (250,480)
     
@@ -55,17 +59,31 @@ if __name__ == '__main__':
         if Cy == -999:	# no ball in vision
             if cleaned is not True:
                 cleaned = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
-            '''
-            if cleaned:
-                GoToNext(robot,pub_cmd,path,pub_path,origin)
-                veryClean = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
-            '''
+
             if cleaned == True:
                 print"I see no ball"
-                cleaned = False
-                veryClean = True
-                #origin[0]+=1.8
-                #GoToNext(robot,pub_cmd,path,pub_path,origin)
+                Finish += 1
+                #Backoff(robot,pub_cmd)
+                #veryClean = spinAround(robot, Cx, Cy, pub_cmd,ic,origin)
+                '''
+                if Finish < 1:
+                    origin[0]+=2.3
+                    origin[1]-=0.7
+                    GoToNext(robot,pub_cmd,path,pub_path,origin)
+                    cleaned = False
+                    Finish += 1
+                '''
+                if Finish == 2:
+                    print"Terminated!"
+                    pass               
+            '''
+            if veryClean == True:
+                origin[0]+=2.3
+                origin[1]-=0.7
+                GoToNext(robot,pub_cmd,path,pub_path,origin)
+                veryClean = False
+            '''
+
         elif Cy > 0:
             print"see ball"        
             if Ready == False:

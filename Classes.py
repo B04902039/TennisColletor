@@ -43,6 +43,10 @@ class robot_location:
         self.robot_pos.orientation.y, self.robot_pos.orientation.z, self.robot_pos.orientation.w])
         self._turn = yaw - self._refrnceAng 
         return self._turn
+    
+    def noSpin(self):
+        self._Flag=status
+        
 
 class image_converter:
   
