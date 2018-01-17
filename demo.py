@@ -33,7 +33,7 @@ pub_cmd = rospy.Publisher("RosAria/cmd_vel",Twist,queue_size=1000)
 
 #subcribe
 rospy.Subscriber("RosAria/pose",Odometry,pos.callback)
-
+rospy.Subscriber("sona",
 if __name__ == '__main__':
     cmd = Twist()
     cmd.linear.x = 0

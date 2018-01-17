@@ -19,7 +19,7 @@ class robot_location:
     _dist = 0
     _turn = 0
     _refrnceAng = 0
-    
+    _Flag = True
     def odometry(self,odom):
         self.robot_pos = odom.pose.pose
         return self.robot_pos
@@ -45,7 +45,7 @@ class robot_location:
         return self._turn
     
     def noSpin(self):
-        self._Flag=status
+        self._Flag = status
         
 
 class image_converter:
