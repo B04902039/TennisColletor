@@ -14,7 +14,9 @@ import numpy as np
 
 from Classes import robot_location, image_converter
 
-def InRange(Cx,Cy,robot,origin): 
+def InRange(Cx,Cy,robot,origin,blockMode):
+    if blockMode == 0:
+        return True 
     (x,y) =  image2global(Cx,Cy)
     #print "\robot position x, y",robot.robot_pos.position.x,robot.robot_pos.position.y
     #print "\n Cx, Cy = ",Cx,Cy
@@ -52,7 +54,7 @@ def findCentroid(image):
 def euclidean_dist(a, b):
     return (a[0]-b[0])**2 + 5*((a[1]-b[1])**2)
 
-def closestBall(robot, ic, origin, last=(250,480)): # last is a static var!!!!!!
+def closestBall(robot, ic, origin, blockMode, last=(250,480)): # last is a static var!!!!!!
     # robot: robot location instance, ic: image converter instance, last: the closest ball in last image
     (Cx,Cy,radius) = 250,-999,0
     ic.cv_image = np.array(ic.cv_image)
@@ -80,7 +82,7 @@ def closestBall(robot, ic, origin, last=(250,480)): # last is a static var!!!!!!
     min_dist = 21000000
     for (x, y) in circles:
     #origin = np.array([0,0]) # hardcoding, need to be modified
-        if InRange(x,y,robot,origin) == True and y>100:
+        if InRange(x,y,robot,origin,blockMode)==True and y>100:
             if euclidean_dist((x,y), last) < min_dist:
                 min_dist = euclidean_dist((x,y), last)
                 (Cx,Cy) = (x,y)

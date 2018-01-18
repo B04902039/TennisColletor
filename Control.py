@@ -68,16 +68,16 @@ def Fetch(robot, pub_cmd):
     
     
     robot.mark()    # mark to go backward
-    while robot.travelDist() <= 0.7:
+    while robot.travelDist() <= 0.5:
         cmd.linear.x = -0.2
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-        if robot.noSpin()==False:
-            print"\n\nSTUCK\n\n"
-            Fetch(robot, pub_cmd)
+    if robot.noSpin()==False:
+        print"\n\nSTUCK\n\n"
+        Fetch(robot, pub_cmd)
     return
 
-def spinAround(robot, cx, cy, pub_cmd,ic,origin):
+def spinAround(robot, cx, cy, pub_cmd,ic,origin, blockMode):
     cmd = Twist()
 
     robot.mark()    # mark current location
@@ -88,7 +88,7 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
         pub_cmd.publish(cmd)    # send command
         time.sleep(0.01)
 
-        (cx, cy) = closestBall(robot,ic,origin) # update vision
+        (cx, cy) = closestBall(robot,ic,origin,blockMode) # update vision
         #print"-----------------",robot.travelAng()
         if robot.travelAng() < 0.4 and robot.travelAng() > 0.1: # turn more than one cycle
             time.sleep(0.5) 
@@ -142,7 +142,7 @@ def GoToNext(robot, pub_cmd, path, pub_path, origin):
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     print"\n\n\nForward\n\n\n"    
-    while not (x_err < 0.3 and abs(y_err) < 0.3): # linear approching
+    while not (x_err < 0.3 and abs(y_err) < 0.5): # linear approching
         #print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))
         #append(robot_pos,pub_path,path)
         yaw = robot.getOrientation()
