@@ -61,18 +61,19 @@ def Fetch(robot, pub_cmd):
     cmd = Twist()
 
     robot.mark()    # mark to go forward
-    while robot.travelDist() <= 0.8:
+    while robot.travelDist() <= 0.7:
         cmd.linear.x = 0.1
         pub_cmd.publish(cmd)
         time.sleep(0.01)
     
     
     robot.mark()    # mark to go backward
-    while robot.travelDist() <= 0.2:
+    while robot.travelDist() <= 0.7:
         cmd.linear.x = -0.2
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-        if robot.noSpin() ==False:
+        if robot.noSpin()==False:
+            print"\n\nSTUCK\n\n"
             Fetch(robot, pub_cmd)
     return
 
@@ -83,35 +84,36 @@ def spinAround(robot, cx, cy, pub_cmd,ic,origin):
     while cy == -999:   # no ball in vision
         cmd.linear.x = -0.05
         cmd.angular.z = -0.5
+        #print robot.travelAng()
         pub_cmd.publish(cmd)    # send command
         time.sleep(0.01)
 
         (cx, cy) = closestBall(robot,ic,origin) # update vision
         #print"-----------------",robot.travelAng()
-        if robot.travelAng() < 0.2 and robot.travelAng() > 0.1: # turn more than one cycle
-            time.sleep(1) 
+        if robot.travelAng() < 0.4 and robot.travelAng() > 0.1: # turn more than one cycle
+            time.sleep(0.5) 
             return True # region clean
     return False
 
 def Backoff(robot,pub_cmd):
     robot.mark()    # mark to go backward
+    cmd = Twist()
     while robot.travelDist() <= 0.6:
         cmd.linear.x = -0.2
         pub_cmd.publish(cmd)
-        
-            
         time.sleep(0.01)
     return
 
 
-def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):
+def GoToNext(robot, pub_cmd, path, pub_path, origin):
     cmd = Twist()
     IK_pos = origin
-    (roll,pitch,yaw) = euler_from_quaternion(\
-    [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
+    yaw = robot.getOrientation()
     
-    x_err = IK_pos[0] - robot_pos.robot_pos.position.x
-    y_err = IK_pos[1] - robot_pos.robot_pos.position.y
+    (x, y) = robot.getEuclidean()
+
+    x_err = IK_pos[0] - x
+    y_err = IK_pos[1] - y
     total_err = math.sqrt(x_err**2 +y_err**2) 
     alpha = math.atan2(y_err,x_err)     
     ori_err = alpha - yaw
@@ -120,16 +122,16 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):
             
     
     print"\n\n\nTURN\n\n\n"
-    while (not(abs(ori_err) < 0.05)) and (not(x_err < 0.5 and abs(y_err) < 0.3)): # turn
-        append(robot_pos,pub_path,path)
-        print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))        
-        (roll,pitch,yaw) = euler_from_quaternion(\
-        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
-        x_err = IK_pos[0] - robot_pos.robot_pos.position.x
-        y_err = IK_pos[1] - robot_pos.robot_pos.position.y
+    while (not(abs(ori_err) < 0.25)) and (not(x_err < 0.5 and abs(y_err) < 0.3)): # turn
+        #append(robot_pos,pub_path,path)
+        #print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))        
+        yaw = robot.getOrientation()
+        (x, y) = robot.getEuclidean()
+        x_err = IK_pos[0] - x
+        y_err = IK_pos[1] - y
         alpha = math.atan2(y_err, x_err)     
         ori_err = alpha - yaw
-        angular = ori_err #+ 0.0015*ori_sum[0]
+        angular = 0.5*ori_err #+ 0.0015*ori_sum[0]
         if angular > 0.25:
             angular = 0.2
         elif angular < -0.25:
@@ -141,13 +143,13 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):
         time.sleep(0.01)
     print"\n\n\nForward\n\n\n"    
     while not (x_err < 0.3 and abs(y_err) < 0.3): # linear approching
+        #print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))
+        #append(robot_pos,pub_path,path)
+        yaw = robot.getOrientation()
+        (x, y) = robot.getEuclidean()
+        x_err = IK_pos[0] - x
+        y_err = IK_pos[1] - y
         print("\nxerr, yerr= "+str(x_err)+' '+str(y_err))
-        print("\nyaw, ori_rr= "+str(yaw)+" "+str(ori_err))
-        append(robot_pos,pub_path,path)
-        (roll,pitch,yaw) = euler_from_quaternion(\
-        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
-        x_err = IK_pos[0] - robot_pos.robot_pos.position.x
-        y_err = IK_pos[1] - robot_pos.robot_pos.position.y
         total_err = math.sqrt(x_err**2 +y_err**2) 
         alpha = math.atan2(y_err,x_err)     
         ori_err = alpha - yaw
@@ -174,14 +176,13 @@ def GoToNext(robot_pos, pub_cmd,path,pub_path, origin):
         #doc.write("\nalpha, ori_err =  "+str(alpha)+" "+str(ori_err))
         pub_cmd.publish(cmd)
         time.sleep(0.01)
-    #print"\n\n\nTURN\n\n\n"
-    while not (abs(yaw) < 0.05): # turn
+    print"\n\n\nTURN\n\n\n"
+    while not (abs(yaw) < 0.1): # turn
+        #append(robot_pos,pub_path,path)
+        yaw = robot.getOrientation()
         print("\nyaw = "+str(yaw))
-        append(robot_pos,pub_path,path)
-        (roll,pitch,yaw) = euler_from_quaternion(\
-        [robot_pos.robot_pos.orientation.x, robot_pos.robot_pos.orientation.y, robot_pos.robot_pos.orientation.z, robot_pos.robot_pos.orientation.w])
 
-        angular = -0.5*yaw #+ 0.0015*ori_sum[0]
+        angular = -0.25*yaw #+ 0.0015*ori_sum[0]
         if angular > 0.25:
             angular = 0.2
         elif angular < -0.25:
